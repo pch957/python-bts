@@ -78,7 +78,7 @@ class TransferProtocol(StatisticsProtocol):
             # Get amount
             asset_info = self.get_asset_info(op["amount"]["asset_id"])
             trx["asset"] = asset_info["symbol"]
-            trx["amount"] = op["amount"]["amount"]/float(
+            trx["amount"] = float(op["amount"]["amount"])/float(
                 10**int(asset_info["precision"]))
 
             # Get accounts involved
@@ -93,7 +93,10 @@ class TransferProtocol(StatisticsProtocol):
                 trx["nonce"] = memo["nonce"]
                 try:
                     privkey = PrivateKey(self.memo_key)
-                    pubkey = PublicKey(memo["from"], prefix=self.prefix)
+                    if trx["to_id"] == self.account["id"]:
+                        pubkey = PublicKey(memo["from"], prefix=self.prefix)
+                    else:
+                        pubkey = PublicKey(memo["to"], prefix=self.prefix)
                     trx["memo"] = Memo.decode_memo(
                         privkey, pubkey, memo["nonce"], memo["message"])
                 except Exception:
@@ -117,7 +120,8 @@ if __name__ == '__main__':
     factory.protocol = TransferProtocol
     node_api = HTTPRPC("127.0.0.1", "4090", "", "")
     factory.protocol.init_transfer_monitor(
-        node_api, "BTS", "nathan", "")
+        node_api, "BTS", "nathan",
+        "5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3")
     # factory.protocol.last_trx = "2.9.176573"
 
     loop = asyncio.get_event_loop()
