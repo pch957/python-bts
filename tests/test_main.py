@@ -7,7 +7,7 @@
 #
 import pytest
 parametrize = pytest.mark.parametrize
-from bts.http_rpc import HTTPRPC
+from bts import HTTPRPC
 from pprint import pprint
 
 

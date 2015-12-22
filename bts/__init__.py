@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""It does cool things"""
+
+from bts.http_rpc import HTTPRPC  # noqa
 
 from bts import metadata
 

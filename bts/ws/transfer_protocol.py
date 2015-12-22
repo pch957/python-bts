@@ -27,7 +27,10 @@
 
 # from pprint import pprint
 from bts.ws.statistics_protocol import StatisticsProtocol
-from graphenebase import Memo, PrivateKey, PublicKey
+try:
+    from graphenebase import Memo, PrivateKey, PublicKey
+except ImportError:
+    print("[warnning] need python-graphinelib to use transfer protocol")
 import datetime
 
 try:
