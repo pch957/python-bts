@@ -65,7 +65,10 @@ class BaseProtocol(WebSocketClientProtocol):
         return ret["result"]
 
     def subscribe(self, object_id, callback):
-        self.callbacks[object_id] = callback
+        if object_id not in self.callbacks:
+            self.callbacks[object_id] = [callback]
+        else:
+            self.callbacks[object_id].append(callback)
 
     def onConnect(self, response):
         print("Server connected: {0}".format(response.peer))
@@ -84,13 +87,13 @@ class BaseProtocol(WebSocketClientProtocol):
         if "id" in res and res["id"] in self.result:
             self.result[res["id"]].set_result(res)
         elif "method" in res:
-            # for notice in sorted(
-            #        res["params"][1][0], key=lambda item: item["id"]):
             for notice in res["params"][1][0]:
                 if "id" not in notice:
-                    pass
-                elif notice["id"] in self.callbacks:
-                    self.callbacks[notice["id"]](notice)
+                    continue
+                for _id in self.callbacks:
+                    if _id == notice["id"][:len(_id)]:
+                        for _cb in self.callbacks[_id]:
+                            _cb(notice)
 
     def onClose(self, wasClean, code, reason):
         print("WebSocket connection closed: {0}".format(reason))
