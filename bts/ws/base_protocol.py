@@ -89,6 +89,10 @@ class BaseProtocol(WebSocketClientProtocol):
         elif "method" in res:
             for notice in res["params"][1][0]:
                 if "id" not in notice:
+                    # means the object have removed from chain
+                    if "removed" in self.callbacks:
+                        for _cb in self.callbacks["removed"]:
+                            _cb(notice)
                     continue
                 for _id in self.callbacks:
                     if _id == notice["id"][:len(_id)]:
