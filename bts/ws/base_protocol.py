@@ -106,7 +106,7 @@ class BaseProtocol(WebSocketClientProtocol):
 if __name__ == '__main__':
 
     from autobahn.asyncio.websocket import WebSocketClientFactory
-    factory = WebSocketClientFactory("ws://localhost:4090", debug=False)
+    factory = WebSocketClientFactory("ws://localhost:4090")
     factory.protocol = BaseProtocol
 
     loop = asyncio.get_event_loop()

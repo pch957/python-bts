@@ -119,7 +119,7 @@ if __name__ == '__main__':
     from autobahn.asyncio.websocket import WebSocketClientFactory
     from bts.http_rpc import HTTPRPC
 
-    factory = WebSocketClientFactory("ws://localhost:4090", debug=False)
+    factory = WebSocketClientFactory("ws://localhost:4090")
     factory.protocol = TransferProtocol
     node_api = HTTPRPC("127.0.0.1", "4090", "", "")
     factory.protocol.init_transfer_monitor(
