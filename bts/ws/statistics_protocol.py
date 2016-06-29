@@ -41,6 +41,7 @@ def id_to_int(id):
 class StatisticsProtocol(BaseProtocol):
     account = {"name": "btsbots", "id": "", "statistics": ""}
     last_trx = ""
+    last_op = "2.9.1"
     node_api = None
 
     def init_statistics(node_api, account_name):
@@ -60,11 +61,13 @@ class StatisticsProtocol(BaseProtocol):
         else:
             return
         while True:
-            trx_info = self.node_api.get_objects([trx_current])[0]
-            self.process_operations(trx_info["operation_id"])
-            trx_current = trx_info["next"]
             if id_to_int(trx_current) <= id_to_int(trx_last):
                 return
+            trx_info = self.node_api.get_objects([trx_current])[0]
+            if id_to_int(trx_info["operation_id"]) <= id_to_int(self.last_op):
+                return
+            self.process_operations(trx_info["operation_id"])
+            trx_current = trx_info["next"]
 
     @asyncio.coroutine
     def onOpen(self):
