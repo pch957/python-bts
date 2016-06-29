@@ -74,9 +74,11 @@ class TransferProtocol(StatisticsProtocol):
             op = operation["op"][1]
             trx = {}
 
-            trx["timestamp"] = datetime.datetime.utcnow().strftime(
-                "%Y%m%d %H:%M")
+            # trx["timestamp"] = datetime.datetime.utcnow().strftime(
+            #     "%Y%m%d %H:%M")
             trx["block_num"] = operation["block_num"]
+            block_info = self.node_api.get_block(trx["block_num"])
+            trx["timestamp"] = block_info["timestamp"]
             trx["trx_id"] = operation["id"]
             # Get amount
             asset_info = self.get_asset_info(op["amount"]["asset_id"])
@@ -125,7 +127,7 @@ if __name__ == '__main__':
     factory.protocol.init_transfer_monitor(
         node_api, "BTS", "nathan",
         "5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3")
-    # factory.protocol.last_trx = "2.9.176573"
+    # factory.protocol.last_trx = "2.9.1"
 
     loop = asyncio.get_event_loop()
     coro = loop.create_connection(factory, '127.0.0.1', 4090)

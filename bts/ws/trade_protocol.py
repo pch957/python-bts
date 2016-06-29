@@ -26,7 +26,12 @@
 ###############################################################################
 
 # from pprint import pprint
-from bts.ws.base_protocol import BaseProtocol
+from bts.ws.statistics_protocol import StatisticsProtocol
+try:
+    from graphenebase import Memo, PrivateKey, PublicKey
+except ImportError:
+    print("[warnning] need python-graphinelib to use trade protocol")
+import datetime
 
 try:
     import asyncio
@@ -38,61 +43,57 @@ def id_to_int(id):
     return int(id.split('.')[-1])
 
 
-class StatisticsProtocol(BaseProtocol):
-    account = {"name": "btsbots", "id": "", "statistics": ""}
-    last_trx = ""
-    node_api = None
+class TradeProtocol(StatisticsProtocol):
+    prefix = "BTS"
+    asset_info = {}
 
-    def init_statistics(node_api, account_name):
-        StatisticsProtocol.node_api = node_api
-        StatisticsProtocol.account["name"] = account_name
+    def init_trade_monitor(node_api, prefix, account_name):
+        StatisticsProtocol.init_statistics(node_api, account_name)
+        TradeProtocol.prefix = prefix
+
+    def get_asset_info(self, asset_id):
+        if asset_id not in self.asset_info:
+            _asset_info = self.node_api.get_objects([asset_id])[0]
+            self.asset_info[asset_id] = _asset_info
+            self.asset_info[_asset_info["symbol"]] = _asset_info
+        return self.asset_info[asset_id]
+
+    def onTrade(self, trx):
+        print("sent %s" % trx)
 
     def process_operations(self, op_id):
         op_info = self.node_api.get_objects([op_id])
-        print(op_info)
-
-    def onStatistics(self, notify):
-        # TODO: if network is ont sync, return
-        trx_last = self.last_trx
-        trx_current = notify["most_recent_op"]
-        if id_to_int(trx_current) > id_to_int(trx_last):
-            self.last_trx = trx_current
-        else:
-            return
-        while True:
-            trx_info = self.node_api.get_objects([trx_current])[0]
-            self.process_operations(trx_info["operation_id"])
-            trx_current = trx_info["next"]
-            if id_to_int(trx_current) <= id_to_int(trx_last):
+        for operation in op_info[::-1]:
+            if operation["op"][0] != 4:
                 return
+            op = operation["op"][1]
+            trx = {}
 
-    @asyncio.coroutine
-    def onOpen(self):
-        yield from super().onOpen()
-        response = yield from self.rpc(
-            [self.database_api, "get_account_by_name", [self.account["name"]]])
-        self.account["statistics"] = response["statistics"]
-        self.account["id"] = response["id"]
-        statistics_info = self.node_api.get_objects(
-            [self.account["statistics"]])[0]
-        if self.last_trx == "":
-            self.last_trx = statistics_info["most_recent_op"]
-        print("monitor account %s, begin from trx: %s" % (
-            self.account["name"], self.last_trx))
-        self.onStatistics(statistics_info)
-        self.subscribe(self.account["statistics"], self.onStatistics)
+            trx["block_num"] = operation["block_num"]
+            block_info = self.node_api.get_block(trx["block_num"])
+            trx["timestamp"] = block_info["timestamp"]
+            trx["trx_id"] = operation["id"]
+            # Get trade info
+            for _type in ["pays", "receives", "fee"]:
+                trx[_type] = [0, ""]
+                asset_info = self.get_asset_info(op[_type]["asset_id"])
+                trx[_type][1] = asset_info["symbol"]
+                trx[_type][0] = float(op[_type]["amount"])/float(
+                        10**int(asset_info["precision"]))
+
+            self.onTrade(trx)
 
 
 if __name__ == '__main__':
 
     from autobahn.asyncio.websocket import WebSocketClientFactory
     from bts.http_rpc import HTTPRPC
+
     factory = WebSocketClientFactory("ws://localhost:4090")
-    factory.protocol = StatisticsProtocol
+    factory.protocol = TradeProtocol
     node_api = HTTPRPC("127.0.0.1", "4090", "", "")
-    factory.protocol.init_statistics(
-        node_api, "nathan")
-    # factory.protocol.last_trx = "2.9.176573"
+    factory.protocol.init_trade_monitor(node_api, "BTS", "nathan")
+    # factory.protocol.last_trx = "2.9.1"
 
     loop = asyncio.get_event_loop()
     coro = loop.create_connection(factory, '127.0.0.1', 4090)
