@@ -255,7 +255,7 @@ setup_dict = dict(
     ],
     packages=find_packages(exclude=(TESTS_DIRECTORY,)),
     install_requires=[
-        "autobahn==0.12.1", "graphenelib==0.4.1", "requests==2.10.0",
+        "autobahn==0.16.0", "graphenelib==0.4.1", "requests==2.10.0",
         "scrypt==0.7.1", "ecdsa==0.13"
         # your module dependencies
     ] + python_version_specific_requires,
