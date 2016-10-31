@@ -1,5 +1,5 @@
 autobahn==0.16.0
-graphenelib==0.4.1
+graphenelib
 requests==2.10.0
 scrypt==0.7.1
 ecdsa==0.13
