@@ -43,6 +43,7 @@ class BaseProtocol(WebSocketClientProtocol):
     def __init__(self):
         self.request_id = 0
         self.history_api = 0
+        self.network_api = 0
         self.database_api = 0
         self.result = {}
         self.callbacks = {}
@@ -79,6 +80,7 @@ class BaseProtocol(WebSocketClientProtocol):
         yield from self.rpc([1, "login", ["", ""]])
         self.database_api = yield from self.rpc([1, "database", []])
         self.history_api = yield from self.rpc([1, "history", []])
+        self.network_api = yield from self.rpc([1, "network_broadcast", []])
         yield from self.rpc(
             [self.database_api, "set_subscribe_callback", [200, False]])
 
