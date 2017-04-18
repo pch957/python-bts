@@ -27,11 +27,7 @@
 
 # from pprint import pprint
 from bts.ws.statistics_protocol import StatisticsProtocol
-try:
-    from graphenebase import Memo, PrivateKey, PublicKey
-except ImportError:
-    print("[warnning] need python-graphinelib to use trade protocol")
-import datetime
+from bts.http_rpc import HTTPRPC
 
 try:
     import asyncio
@@ -44,12 +40,7 @@ def id_to_int(id):
 
 
 class TradeProtocol(StatisticsProtocol):
-    prefix = "BTS"
     asset_info = {}
-
-    def init_trade_monitor(node_api, prefix, account_name):
-        StatisticsProtocol.init_statistics(node_api, account_name)
-        TradeProtocol.prefix = prefix
 
     def get_asset_info(self, asset_id):
         if asset_id not in self.asset_info:
@@ -85,22 +76,13 @@ class TradeProtocol(StatisticsProtocol):
 
 
 if __name__ == '__main__':
+    import sys
+    uri = ""
+    if len(sys.argv) >= 2:
+        uri = sys.argv[1]
 
-    from autobahn.asyncio.websocket import WebSocketClientFactory
-    from bts.http_rpc import HTTPRPC
-
-    factory = WebSocketClientFactory("ws://localhost:4090")
-    factory.protocol = TradeProtocol
-    node_api = HTTPRPC("127.0.0.1", "4090", "", "")
-    factory.protocol.init_trade_monitor(node_api, "BTS", "nathan")
-    # factory.protocol.last_trx = "2.9.1"
-
-    loop = asyncio.get_event_loop()
-    coro = loop.create_connection(factory, '127.0.0.1', 4090)
-    loop.run_until_complete(coro)
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        loop.close()
+    ws = TradeProtocol(uri)
+    node_api = HTTPRPC(uri)
+    ws.init_statistics(
+        node_api, "exchange.btsbots")
+    asyncio.get_event_loop().run_until_complete(ws.handler())

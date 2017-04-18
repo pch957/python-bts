@@ -50,17 +50,19 @@ class RPCConnection(Exception):
 
 
 class HTTPRPC(object):
-    def __init__(self, host, port, username, password):
-        self.host = host
-        self.port = port
-        self.username = username
-        self.password = password
+    def __init__(self, uri="", username="", password=""):
+        if not uri:
+            uri = "https://bitshares.openledger.info/ws"
+        uri = uri.replace("wss://", "https://")
+        self.uri = uri
+        self.username = ""
+        self.password = ""
         self.headers = {'content-type': 'application/json'}
 
     def rpcexec(self, payload):
         try:
             response = requests.post(
-                "http://{}:{}/rpc".format(self.host, self.port),
+                self.uri,
                 data=json.dumps(payload),
                 headers=self.headers,
                 auth=(self.username, self.password))
@@ -102,13 +104,9 @@ class HTTPRPC(object):
 if __name__ == '__main__':
     import sys
     from pprint import pprint
-    host = "localhost"
-    port = "4092"
+    uri = ""
     if len(sys.argv) >= 2:
-        host = sys.argv[1]
-    if len(sys.argv) >= 2:
-        port = sys.argv[2]
+        uri = sys.argv[1]
 
-    rpc = HTTPRPC(host, port, "", "")
-    pprint(rpc.about())
+    rpc = HTTPRPC(uri)
     pprint(rpc.get_dynamic_global_properties())

@@ -27,7 +27,7 @@
 
 # from pprint import pprint
 import json
-from autobahn.asyncio.websocket import WebSocketClientProtocol
+import websockets
 
 try:
     import asyncio
@@ -39,8 +39,11 @@ class RPCError(Exception):
     pass
 
 
-class BaseProtocol(WebSocketClientProtocol):
-    def __init__(self):
+class BaseProtocol(object):
+    def __init__(self, uri=""):
+        if not uri:
+            uri = "wss://bitshares.openledger.info/ws"
+        self.uri = uri
         self.request_id = 0
         self.history_api = 0
         self.network_api = 0
@@ -48,14 +51,13 @@ class BaseProtocol(WebSocketClientProtocol):
         self.result = {}
         self.callbacks = {}
 
-    @asyncio.coroutine
-    def rpc(self, params):
+    async def rpc(self, params):
         request_id = self.request_id
         self.request_id += 1
         request = {"id": request_id, "method": "call", "params": params}
         future = self.result[request_id] = asyncio.Future()
-        self.sendMessage(json.dumps(request).encode('utf8'))
-        yield from asyncio.wait_for(future, None)
+        await self.websocket.send(json.dumps(request).encode('utf8'))
+        await asyncio.wait_for(future, None)
         self.result.pop(request_id)
         ret = future.result()
         if 'error' in ret:
@@ -71,21 +73,29 @@ class BaseProtocol(WebSocketClientProtocol):
         else:
             self.callbacks[object_id].append(callback)
 
-    def onConnect(self, response):
-        print("Server connected: {0}".format(response.peer))
+    async def handler_message(self):
+        while True:
+            payload = await self.websocket.recv()
+            self.onMessage(payload)
 
-    @asyncio.coroutine
-    def onOpen(self):
-        print("WebSocket connection open.")
-        yield from self.rpc([1, "login", ["", ""]])
-        self.database_api = yield from self.rpc([1, "database", []])
-        self.history_api = yield from self.rpc([1, "history", []])
-        self.network_api = yield from self.rpc([1, "network_broadcast", []])
-        yield from self.rpc(
+    async def onOpen(self):
+        await self.rpc([1, "login", ["", ""]])
+        self.database_api = await self.rpc([1, "database", []])
+        self.history_api = await self.rpc([1, "history", []])
+        self.network_api = await self.rpc([1, "network_broadcast", []])
+        await self.rpc(
             [self.database_api, "set_subscribe_callback", [200, False]])
 
-    def onMessage(self, payload, isBinary):
-        res = json.loads(payload.decode('utf8'))
+    async def handler(self):
+        async with websockets.connect(self.uri) as websocket:
+            print("WebSocket connection open.")
+            self.websocket = websocket
+            task1 = asyncio.ensure_future(self.handler_message())
+            task2 = asyncio.ensure_future(self.onOpen())
+            await asyncio.wait([task1, task2])
+
+    def onMessage(self, payload):
+        res = json.loads(payload)
         if "id" in res and res["id"] in self.result:
             self.result[res["id"]].set_result(res)
         elif "method" in res:
@@ -101,22 +111,12 @@ class BaseProtocol(WebSocketClientProtocol):
                         for _cb in self.callbacks[_id]:
                             _cb(notice)
 
-    def onClose(self, wasClean, code, reason):
-        print("WebSocket connection closed: {0}".format(reason))
-
 
 if __name__ == '__main__':
+    import sys
+    uri = ""
+    if len(sys.argv) >= 2:
+        uri = sys.argv[1]
 
-    from autobahn.asyncio.websocket import WebSocketClientFactory
-    factory = WebSocketClientFactory("ws://localhost:4090")
-    factory.protocol = BaseProtocol
-
-    loop = asyncio.get_event_loop()
-    coro = loop.create_connection(factory, '127.0.0.1', 4090)
-    loop.run_until_complete(coro)
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        loop.close()
+    ws = BaseProtocol(uri)
+    asyncio.get_event_loop().run_until_complete(ws.handler())

@@ -255,8 +255,8 @@ setup_dict = dict(
     ],
     packages=find_packages(exclude=(TESTS_DIRECTORY,)),
     install_requires=[
-        "autobahn==0.16.0", "graphenelib", "requests==2.10.0",
-        "scrypt==0.7.1", "ecdsa==0.13"
+        "graphenelib==0.4.8", "requests==2.10.0",
+        "scrypt==0.7.1", "ecdsa==0.13, websockets"
         # your module dependencies
     ] + python_version_specific_requires,
     # Allow tests to be run with `python setup.py test'.

@@ -27,11 +27,11 @@
 
 # from pprint import pprint
 from bts.ws.statistics_protocol import StatisticsProtocol
+from bts.http_rpc import HTTPRPC
 try:
     from graphenebase import Memo, PrivateKey, PublicKey
 except ImportError:
     print("[warnning] need python-graphinelib to use transfer protocol")
-import datetime
 
 try:
     import asyncio
@@ -48,10 +48,10 @@ class TransferProtocol(StatisticsProtocol):
     memo_key = ""
     asset_info = {}
 
-    def init_transfer_monitor(node_api, prefix, account_name, memo_key):
-        StatisticsProtocol.init_statistics(node_api, account_name)
-        TransferProtocol.prefix = prefix
-        TransferProtocol.memo_key = memo_key
+    def init_transfer_monitor(self, node_api, prefix, account_name, memo_key):
+        self.init_statistics(node_api, account_name)
+        self.prefix = prefix
+        self.memo_key = memo_key
 
     def get_asset_info(self, asset_id):
         if asset_id not in self.asset_info:
@@ -117,24 +117,14 @@ class TransferProtocol(StatisticsProtocol):
 
 
 if __name__ == '__main__':
+    import sys
+    uri = ""
+    if len(sys.argv) >= 2:
+        uri = sys.argv[1]
 
-    from autobahn.asyncio.websocket import WebSocketClientFactory
-    from bts.http_rpc import HTTPRPC
-
-    factory = WebSocketClientFactory("ws://localhost:4090")
-    factory.protocol = TransferProtocol
-    node_api = HTTPRPC("127.0.0.1", "4090", "", "")
-    factory.protocol.init_transfer_monitor(
+    ws = TransferProtocol(uri)
+    node_api = HTTPRPC(uri)
+    ws.init_transfer_monitor(
         node_api, "BTS", "nathan",
         "5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3")
-    # factory.protocol.last_trx = "2.9.1"
-
-    loop = asyncio.get_event_loop()
-    coro = loop.create_connection(factory, '127.0.0.1', 4090)
-    loop.run_until_complete(coro)
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        loop.close()
+    asyncio.get_event_loop().run_until_complete(ws.handler())

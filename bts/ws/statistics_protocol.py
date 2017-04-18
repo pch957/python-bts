@@ -27,6 +27,7 @@
 
 # from pprint import pprint
 from bts.ws.base_protocol import BaseProtocol
+from bts.http_rpc import HTTPRPC
 
 try:
     import asyncio
@@ -39,14 +40,14 @@ def id_to_int(id):
 
 
 class StatisticsProtocol(BaseProtocol):
-    account = {"name": "btsbots", "id": "", "statistics": ""}
+    account = {"name": "exchange.btsbots", "id": "", "statistics": ""}
     last_trx = ""
     last_op = "2.9.1"
     node_api = None
 
-    def init_statistics(node_api, account_name):
-        StatisticsProtocol.node_api = node_api
-        StatisticsProtocol.account["name"] = account_name
+    def init_statistics(self, node_api, account_name):
+        self.node_api = node_api
+        self.account["name"] = account_name
 
     def process_operations(self, op_id):
         op_info = self.node_api.get_objects([op_id])
@@ -87,22 +88,13 @@ class StatisticsProtocol(BaseProtocol):
 
 
 if __name__ == '__main__':
+    import sys
+    uri = ""
+    if len(sys.argv) >= 2:
+        uri = sys.argv[1]
 
-    from autobahn.asyncio.websocket import WebSocketClientFactory
-    from bts.http_rpc import HTTPRPC
-    factory = WebSocketClientFactory("ws://localhost:4090")
-    factory.protocol = StatisticsProtocol
-    node_api = HTTPRPC("127.0.0.1", "4090", "", "")
-    factory.protocol.init_statistics(
-        node_api, "nathan")
-    # factory.protocol.last_trx = "2.9.176573"
-
-    loop = asyncio.get_event_loop()
-    coro = loop.create_connection(factory, '127.0.0.1', 4090)
-    loop.run_until_complete(coro)
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        loop.close()
+    ws = StatisticsProtocol(uri)
+    node_api = HTTPRPC(uri)
+    ws.init_statistics(
+        node_api, "exchange.btsbots")
+    asyncio.get_event_loop().run_until_complete(ws.handler())
