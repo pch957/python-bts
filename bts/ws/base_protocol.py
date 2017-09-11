@@ -87,7 +87,9 @@ class BaseProtocol(object):
             [self.database_api, "set_subscribe_callback", [200, False]])
 
     async def handler(self):
-        async with websockets.connect(self.uri) as websocket:
+        # can handle message less than 8M
+        async with websockets.connect(
+                self.uri, max_size=2**20*8, max_queue=2**5*2) as websocket:
             print("WebSocket connection open.")
             self.websocket = websocket
             task1 = asyncio.ensure_future(self.handler_message())
