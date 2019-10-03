@@ -1,5 +1,5 @@
 graphenelib==0.4.8
-requests==2.10.0
+requests==2.20.0
 scrypt==0.7.1
 ecdsa==0.13
 websockets
